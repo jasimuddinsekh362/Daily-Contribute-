@@ -1,0 +1,61 @@
+name: Daily Log Commit
+
+on:
+  schedule:
+    - cron: '0 18 * * *'  # Runs daily at midnight Bangladesh time (UTC+6)
+  workflow_dispatch:
+
+jobs:
+  daily-log:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate Daily Quote
+        id: quote
+        run: |
+          # Create a simple list of inspirational quotes or coding tips
+          QUOTES=(
+            "“First, solve the problem. Then, write the code.” – John Johnson"
+            "“Code is like humor. When you have to explain it, it’s bad.” – Cory House"
+            "“Make it work, make it right, make it fast.” – Kent Beck"
+            "“Programs must be written for people to read.” – Harold Abelson"
+            "“Experience is the name everyone gives to their mistakes.” – Oscar Wilde"
+            "“Simplicity is the soul of efficiency.” – Austin Freeman"
+            "“The best error message is the one that never shows up.” – Thomas Fuchs"
+          )
+
+          # Pick one randomly
+          RANDOM_INDEX=$((RANDOM % ${#QUOTES[@]}))
+          SELECTED_QUOTE=${QUOTES[$RANDOM_INDEX]}
+
+          echo "quote=${SELECTED_QUOTE}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate New Daily Log File
+        id: generate
+        run: |
+          TODAY=$(date '+%Y-%m-%d')
+          FILENAME="log-${TODAY}.txt"
+
+          echo "🗓️ Daily log for ${TODAY}" > "${FILENAME}"
+          echo "" >> "${FILENAME}"
+          echo "💡 Quote of the Day:" >> "${FILENAME}"
+          echo "\"${{ steps.quote.outputs.quote }}\"" >> "${FILENAME}"
+
+          echo "filename=${FILENAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and Push
+        env:
+          FILENAME: ${{ steps.generate.outputs.filename }}
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+          git add "$FILENAME"
+          git commit -m "docs: add daily log with quote for ${FILENAME%.txt}"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          
